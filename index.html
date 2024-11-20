@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2024 밈 아카이브: 컨텐츠 홍수 시대</title>
+    <style>
+        @font-face {
+            font-family: 'Yeongdo-Rg';
+            src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2410-1@1.2/Yeongdo-Rg.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+
+        h1 {
+            color: #000000;
+            text-align: center;
+            font-size: 6vw;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            font-family: 'Yeongdo-Rg';
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>2024 밈 아카이브: 컨텐츠 홍수 시대</h1>
+    <script src="https://cdn.jsdelivr.net/npm/matter-js@0.17.1/build/matter.min.js"></script>
+    <script>
+        const { Engine, Render, World, Bodies, Runner, Events, Composite } = Matter;
+
+        // Matter.js 엔진 및 렌더 초기화
+        const engine = Engine.create();
+        const render = Render.create({
+            element: document.body,
+            engine: engine,
+            options: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                wireframes: false,
+                background: '#ffffff',
+            }
+        });
+
+        render.canvas.width = window.innerWidth;
+        render.canvas.height = window.innerHeight;
+
+        // 미디어 소스 배열 (이미지 1개 + 동영상 1개)
+        const mediaSources = [
+            'https://i.namu.wiki/i/rT0GvsMijK_S5c5BpxNH2Zn_KhuruQfwugDcLXljIIXn5wvWxsP0elRIfw3BaDoDrsnr31r6d66d7fyJKI7pV3twOD-5_vlfc2fBgdQG-tQNE3Rch-KmJyprVk4cvtZYLevSkEoINgvy1iVs55Wldg.webp',
+            'https://i.namu.wiki/i/xAo9Mzp1apZ5YFbHB4OHj8H65hiDl30QuAH2tYXGUWSZwqSJGuPTl2vxSG6MrVZ8LYlIXdy-GOPrSp5zkFaTJQ.mp4'
+        ];
+
+        // 미디어 요소 저장 배열
+        const mediaElements = [];
+
+        // 사각형을 랜덤으로 생성하여 미디어를 렌더링
+        function drawMediaBox(x, y) {
+            const randomIndex = Math.floor(Math.random() * mediaSources.length);
+            const source = mediaSources[randomIndex];
+            const isVideo = source.endsWith('.mp4');
+            const type = isVideo ? 'video' : 'image'; // 미디어 타입 구분
+
+            const size = Math.random() * 100 + 50; // 기본 크기를 50 ~ 150px 사이로 랜덤 설정
+            const box = Bodies.rectangle(x, y, size, size, {
+                restitution: 0.8,
+                render: { fillStyle: '#FFFFFF' } // 도형 색깔을 흰색으로 설정
+            });
+
+            World.add(engine.world, box);
+
+            if (isVideo) {
+                const videoElement = document.createElement('video');
+                videoElement.src = source;
+                videoElement.loop = true;
+                videoElement.muted = true;
+                videoElement.play();
+                videoElement.onloadedmetadata = () => {
+                    const aspectRatio = videoElement.videoWidth / videoElement.videoHeight;
+                    const videoWidth = size * aspectRatio;
+                    mediaElements.push({ element: videoElement, box, aspectRatio, width: videoWidth, height: size, sizeMultiplier: 1, type });
+                };
+            } else {
+                const img = new Image();
+                img.src = source;
+                img.onload = () => {
+                    const aspectRatio = img.width / img.height; // 이미지 비율 계산
+                    const imgWidth = size * aspectRatio;
+                    mediaElements.push({ element: img, box, aspectRatio, width: imgWidth, height: size, sizeMultiplier: 1, type });
+                };
+            }
+        }
+
+        // 도형 크기 확장 및 터뜨리기 체크
+        function mergeShapes(shapeA, shapeB) {
+            // 두 도형의 타입이 같을 때만 크기를 두 배로 합침
+            if (shapeA.type !== shapeB.type) return;
+
+            const newSize = shapeA.sizeMultiplier * 2;
+            if (newSize >= 6) {
+                // 크기가 6배 이상이면 터짐
+                World.remove(engine.world, [shapeA.box, shapeB.box]);
+                mediaElements.splice(mediaElements.indexOf(shapeA), 1);
+                mediaElements.splice(mediaElements.indexOf(shapeB), 1);
+            } else {
+                // 도형 크기 업데이트
+                shapeA.sizeMultiplier = newSize;
+                shapeB.sizeMultiplier = newSize;
+                shapeA.box = Bodies.rectangle(shapeA.box.position.x, shapeA.box.position.y, shapeA.width * newSize, shapeA.height * newSize, { restitution: 0.8 });
+                shapeB.box = Bodies.rectangle(shapeB.box.position.x, shapeB.box.position.y, shapeB.width * newSize, shapeB.height * newSize, { restitution: 0.8 });
+                World.add(engine.world, [shapeA.box, shapeB.box]);
+
+                // 이미지나 비디오 크기 업데이트
+                shapeA.element.style.width = (shapeA.width * newSize) + 'px';
+                shapeA.element.style.height = (shapeA.height * newSize) + 'px';
+                shapeB.element.style.width = (shapeB.width * newSize) + 'px';
+                shapeB.element.style.height = (shapeB.height * newSize) + 'px';
+            }
+        }
+
+        // 충돌 처리
+        Events.on(engine, 'collisionStart', (event) => {
+            const pairs = event.pairs;
+            pairs.forEach(pair => {
+                const bodyA = pair.bodyA;
+                const bodyB = pair.bodyB;
+
+                // 충돌한 도형 찾기
+                const shapeA = mediaElements.find(item => item.box === bodyA);
+                const shapeB = mediaElements.find(item => item.box === bodyB);
+
+                if (shapeA && shapeB && shapeA !== shapeB) {
+                    mergeShapes(shapeA, shapeB);
+                }
+            });
+        });
+
+        // 일정 간격으로 사각형 생성
+        setInterval(() => {
+            const randomX = Math.random() * window.innerWidth;
+            drawMediaBox(randomX, -50);
+        }, 800);
+
+        // 미디어 요소를 Matter.js의 렌더 이후에 그리기
+        Events.on(render, 'afterRender', () => {
+            const context = render.context;
+            mediaElements.forEach(({ element, box, aspectRatio, width, height }) => {
+                const { x, y } = box.position;
+                const size = box.bounds.max.x - box.bounds.min.x;  // width
+
+                let drawWidth = width || size;
+                let drawHeight = height || size;
+
+                // 이미지나 비디오 그리기
+                if (element instanceof HTMLVideoElement || element instanceof HTMLImageElement) {
+                    context.drawImage(element, x - drawWidth / 2, y - drawHeight / 2, drawWidth, drawHeight);
+                }
+            });
+        });
+
+        // 바닥 추가
+        const ground = Bodies.rectangle(window.innerWidth / 2, window.innerHeight + 50, window.innerWidth, 100, {
+            isStatic: true,
+            render: {
+                fillStyle: '#171714',
+            }
+        });
+        World.add(engine.world, ground);
+
+        Render.run(render);
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+
+        // 창 크기 변경 시 캔버스 크기 조정
+        window.addEventListener('resize', () => {
+            render.canvas.width = window.innerWidth;
+            render.canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
